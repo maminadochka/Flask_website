@@ -1,9 +1,14 @@
 import os.path
 import pymysql
-from flask import url_for, request, redirect, render_template, send_from_directory
-from . import app, db
+from flask import url_for, request, redirect, render_template, send_from_directory, session
+from . import app
 
 pymysql.install_as_MySQLdb()
+
+
+def log_in_flag():
+    return session.get('visit', default=False)
+
 
 def make_connection_to_db():
     conn = pymysql.connect(
@@ -15,10 +20,10 @@ def make_connection_to_db():
     return conn, conn.cursor()
 
 
-@app.route("/setup")
-def setup():
-    db.create_all()
-    return "setup"
+# @app.route("/setup")
+# def setup():
+#     db.create_all()
+#     return "setup"
 
 
 @app.route("/", methods=['GET', 'POST'])
@@ -27,7 +32,7 @@ def home_page():
         url = url_for('offer')
         return redirect(url)
     else:
-        return render_template('home_page.html')
+        return render_template('home_page.html',  flag=log_in_flag())
 
 
 @app.route("/offer", methods=['GET', 'POST'])
@@ -39,7 +44,6 @@ def offer():
         username = request.form.get('username')
         phone = request.form.get('phone')
         email = request.form.get('email')
-        url = url_for('get_offer_page')
 
         conn, cur = make_connection_to_db()
 
@@ -58,13 +62,16 @@ def offer():
         conn.commit()
         conn.close()
 
+        url = url_for('get_offer_page')
         return redirect(url)
     else:
         return render_template('offer_page.html', message=message)
 
+
 @app.route("/get_offer", methods=['GET', 'POST'])
 def get_offer_page():
         return render_template('get_offer_page.html')
+
 
 @app.route("/login", methods=['GET', 'POST'])
 def log_in():
@@ -77,6 +84,7 @@ def log_in():
         password = request.form.get('password')
 
     if username == 'root' and password == 'root':
+        session['visit'] = True
         message = "Correct username and password"
         url = url_for('admin')
         return redirect(url)
@@ -85,24 +93,34 @@ def log_in():
         return render_template('login_page.html', message=message)
 
 
+@app.route("/logout")
+def log_out():
+    session['visit'] = False
+    return redirect(url_for('home_page'))
+
 @app.route("/download_resume")
 def download_resume():
     filepath = os.path.abspath('MyResumeURL.pdf')
     return send_from_directory(directory=os.path.dirname(filepath), path='MyResumeURL.pdf')
 
+
 @app.route("/admin")
 def admin():
-    conn, cur = make_connection_to_db()
+    if not log_in_flag():
+        return redirect(url_for('log_in'))
+    else:
+        conn, cur = make_connection_to_db()
 
-    cur.execute("SELECT * FROM `offers`")
-    offers = cur.fetchall()
-    #print(offers)
+        cur.execute("SELECT * FROM `offers`")
+        offers = cur.fetchall()
 
-    conn.commit()
-    conn.close()
-    return render_template('admin_page.html', offers = offers)
+        conn.commit()
+        conn.close()
+        return render_template('admin_page.html', offers=offers)
 
-app.run()
+
+if __name__ == "__main__":
+    app.run(host='127.0.0.1', port=8, debug=True)
 
 
 #TODO add css

@@ -1,6 +1,12 @@
 <title>HomePage</title>
 <p align="center">
-    <a href="/"> Home</a> | <a href="/login">Log in</a>
+    <a href="/"> Home</a> |
+    {%if flag == True%}
+    <a href="/logout">Log out</a>
+    {%else%}
+    <a href="/login">Log in</a>
+    {%endif%}
+
 </p>
 <h1 align="center"><font size=10pt face="Arial">Ksenia Tsutsalevich</font></h1>
 <h3 align="center"><font face="Arial">- back-end developer -</font></h3>
